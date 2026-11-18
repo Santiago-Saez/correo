@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Correo — Cliente de 10.000 mensajes</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">✉️</div>
+      <div>
+        <div class="brand-name">Correo</div>
+        <div class="brand-sub">10.000 mensajes · virtualizado</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <span class="search-key">/</span>
+      <input id="search" type="text" placeholder="Buscar en el correo  ( / para enfocar, Esc para salir )" autocomplete="off" />
+      <kbd class="search-hint">⌘K</kbd>
+    </div>
+    <div class="top-actions">
+      <button id="btn-stress" class="btn ghost" title="Hace scroll rápido programático y reporta tiempos">⚡ Scroll test</button>
+      <button id="btn-help" class="btn ghost" title="Atajos (?)">?</button>
+      <button id="btn-compose" class="btn primary">+ Redactar</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <nav id="folders"></nav>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Etiquetas</div>
+        <div id="labels"></div>
+      </div>
+      <div class="sidebar-section demo-states">
+        <div class="sidebar-title">Estados (demo)</div>
+        <div class="state-btns">
+          <button data-state="ok" class="chip active">Datos</button>
+          <button data-state="loading" class="chip">Carga</button>
+          <button data-state="empty" class="chip">Vacío</button>
+          <button data-state="error" class="chip">Error</button>
+        </div>
+        <p class="demo-hint">Para evaluar esqueletos, vacíos y errores diseñados.</p>
+      </div>
+      <div class="sidebar-footer">
+        <div class="quota"><div class="quota-bar"><i style="width:68%"></i></div><span>15 GB · 68% usado</span></div>
+      </div>
+    </aside>
+
+    <section class="list-col">
+      <div class="list-toolbar">
+        <label class="check"><input type="checkbox" id="select-all" /><span></span></label>
+        <span id="count-label" class="count-label">—</span>
+        <span id="filter-time" class="filter-time"></span>
+        <div class="spacer"></div>
+        <div id="batch-bar" class="batch-bar hidden">
+          <span id="batch-count" class="batch-count">0 sel.</span>
+          <button class="btn xs" data-batch="read">Marcar leído</button>
+          <button class="btn xs" data-batch="unread">No leído</button>
+          <button class="btn xs" data-batch="archive">Archivar (e)</button>
+          <button class="btn xs danger" data-batch="delete">Eliminar</button>
+          <button class="btn xs ghost" data-batch="clear">Limpiar</button>
+        </div>
+      </div>
+
+      <div id="perf" class="perf">
+        <div class="perf-main">
+          <div class="fps"><span id="fps-val">60</span><small>fps</small></div>
+          <div class="perf-grid">
+            <div><label>render último</label><b id="m-last">0.0 ms</b></div>
+            <div><label>render media</label><b id="m-avg">0.0 ms</b></div>
+            <div><label>render p95</label><b id="m-p95">0.0 ms</b></div>
+            <div><label>ventana</label><b id="m-range">—</b></div>
+          </div>
+        </div>
+        <div class="perf-bars" id="perf-bars" aria-hidden="true"></div>
+        <div class="perf-foot"><span id="m-extra">0 filas · scroll 0 px/s</span><span id="m Verdict" class="verdict"></span></div>
+      </div>
+
+      <div id="viewport" class="viewport" tabindex="0" role="listbox" aria-label="Lista de mensajes">
+        <div id="spacer" class="spacer-list"></div>
+        <div id="pool" class="pool"></div>
+
+        <!-- overlays -->
+        <div id="state-loading" class="overlay hidden">
+          <div class="skeleton-list" id="skeleton-list"></div>
+        </div>
+        <div id="state-empty" class="overlay hidden">
+          <div class="empty-card">
+            <div class="empty-art">📭</div>
+            <h2 id="empty-title">Todo al día</h2>
+            <p id="empty-desc">No hay mensajes aquí. Archiva, busca o cambia de carpeta.</p>
+            <div class="empty-actions">
+              <button class="btn primary" id="empty-cta">Ver recibidos</button>
+              <button class="btn ghost" id="empty-clear-search">Limpiar búsqueda</button>
+            </div>
+            <div class="empty-tips"><span><b>j/k</b> navegar</span><span><b>Enter</b> abrir</span><span><b>e</b> archivar</span><span><b>/</b> buscar</span></div>
+          </div>
+        </div>
+        <div id="state-error" class="overlay hidden">
+          <div class="error-card">
+            <div class="error-art">⚠️</div>
+            <h2>No pudimos cargar los mensajes</h2>
+            <p id="error-desc">Error 503 · el servicio de correo no responde. Tus datos locales están a salvo.</p>
+            <div class="error-actions">
+              <button class="btn primary" id="btn-retry">Reintentar</button>
+              <button class="btn ghost" id="btn-offline">Ver copia local</button>
+            </div>
+            <details class="error-detail"><summary>Detalles técnicos</summary><code id="error-code">fetch /api/messages?folder=inbox → 503 after 812ms</code></details>
+          </div>
+        </div>
+      </div>
+      <div class="list-statusbar"><span id="statusbar">Listo · 10.000 mensajes generados localmente</span></div>
+    </section>
+
+    <section class="reader" id="reader">
+      <div class="reader-empty" id="reader-empty">
+        <div class="reader-empty-art">📖</div>
+        <p><b>Enter</b> para abrir el mensaje enfocado<br /><span>Navega con <b>j</b> / <b>k</b> · archiva con <b>e</b></span></p>
+      </div>
+      <article class="reader-content hidden" id="reader-content">
+        <div class="reader-head">
+          <h1 id="r-subject"></h1>
+          <div class="reader-meta">
+            <div class="avatar" id="r-avatar"></div>
+            <div><div id="r-from" class="r-from"></div><div id="r-date" class="r-date"></div></div>
+            <div class="spacer"></div>
+            <button class="btn xs" id="r-archive">Archivar (e)</button>
+            <button class="btn xs ghost" id="r-close">Cerrar (Esc)</button>
+          </div>
+          <div class="reader-tags" id="r-tags"></div>
+        </div>
+        <div class="reader-body" id="r-body"></div>
+      </article>
+    </section>
+  </div>
+
+  <div id="toast" class="toast hidden">
+    <div class="toast-msg"><span id="toast-text">3 archivados</span><span id="toast-count" class="toast-count">5s</span></div>
+    <div class="toast-bar"><i id="toast-bar"></i></div>
+    <button class="btn xs primary" id="toast-undo">Deshacer</button>
+  </div>
+
+  <div id="help" class="help hidden">
+    <div class="help-card">
+      <h3>Atajos de teclado</h3>
+      <ul>
+        <li><kbd>j</kbd>/<kbd>k</kbd> o <kbd>↓</kbd>/<kbd>↑</kbd> siguiente / anterior</li>
+        <li><kbd>Shift</kbd>+<kbd>j</kbd>/<kbd>k</kbd> extender selección múltiple</li>
+        <li><kbd>x</kbd> seleccionar · <kbd>*</kbd> seleccionar todo visible</li>
+        <li><kbd>Enter</kbd> abrir · <kbd>e</kbd> archivar · <kbd>/</kbd> buscar · <kbd>Esc</kbd> salir</li>
+      </ul>
+      <button class="btn primary" id="help-close">Cerrar</button>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
